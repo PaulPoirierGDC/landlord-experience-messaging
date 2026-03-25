@@ -156,7 +156,8 @@ body{
 }
 .conv-hdr-title{font-size:16px;font-weight:700;color:#061f18;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:24px;}
 .conv-hdr-back{position:absolute;left:24px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;width:20px;height:20px;}
-.conv-hdr-more{position:absolute;right:24px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;width:20px;height:20px;}
+.conv-hdr-action{position:absolute;right:24px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;width:24px;height:24px;color:#061f18;}
+.conv-hdr-action.hidden{opacity:0;pointer-events:none;}
 
 .msgs-area{flex:1;overflow-y:auto;display:flex;flex-direction:column;justify-content:flex-end;}
 .msgs-area::-webkit-scrollbar{display:none;}
@@ -419,9 +420,6 @@ body{
 /* ── V10: New filter chips (highlighted) ── */
 .chip.v10{border-color:#6aa086;color:#2e6148;}
 .chip.v10.filter-on{background:#e8f5ee;color:#2e6148;border-color:#6aa086;}
-/* ── V10: Refus groupé button ── */
-.rg-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px 16px;background:transparent;border:1.5px dashed #e2e4e8;border-radius:12px;font-size:14px;font-weight:500;font-family:'Satoshi',sans-serif;color:#727373;cursor:pointer;margin-top:4px;transition:background .12s;}
-.rg-btn:active{background:#fafafa;}
 .v10-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;background:#2e6148;color:#fff;padding:2px 6px;border-radius:100px;letter-spacing:.4px;vertical-align:middle;margin-left:4px;}
 /* ── V10: Question visite ── */
 .q-visite{margin-bottom:14px;}
@@ -568,9 +566,6 @@ body{
     <div class="empty-fav-desc" id="empty-proprio-fav-desc" style="display:none;">Vos candidats favoris seront visibles ici.</div>
     <div class="empty-desc" id="empty-proprio-desc">Aucun résultat pour ce filtre.</div>
   </div>
-  <div style="padding:8px 8px 14px;">
-    <button class="rg-btn" onclick="openRefusGroupe()">✕ Refus groupé <span class="v10-badge">V10</span></button>
-  </div>
 </div>
 
 <!-- ════ SCREEN: CONVERSATION ════ -->
@@ -586,7 +581,9 @@ body{
   <div class="conv-hdr">
     <button class="conv-hdr-back" onclick="goBack()"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"/></svg></button>
     <span class="conv-hdr-title" id="conv-title">Loue studio 17m² Paris 17ème</span>
-    <button class="conv-hdr-more"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 256 256" fill="currentColor"><circle cx="128" cy="60" r="16"/><circle cx="128" cy="128" r="16"/><circle cx="128" cy="196" r="16"/></svg></button>
+    <button class="conv-hdr-action hidden" id="conv-hdr-action" onclick="toggleFav()" aria-label="Ajouter aux favoris">
+      <span id="conv-hdr-action-icon"></span>
+    </button>
   </div>
   <div class="msgs-area" id="msgs-area"></div>
   <div class="msg-input">
@@ -673,6 +670,13 @@ body{
     <div class="cho-body">
       <div class="cho-title" id="cho-title">Choisir Sophie Debrade ?</div>
       <div class="cho-desc">En choisissant ce locataire, vous déclarez qu'il est votre locataire pour ce logement.</div>
+      <div class="q-visite">
+        <div class="q-visite-lbl">A-t-il visité le bien ?</div>
+        <div class="q-visite-opts">
+          <button type="button" class="q-opt" id="cho-visit-yes" onclick="setFlowVisit('choose','oui',this)">Oui</button>
+          <button type="button" class="q-opt" id="cho-visit-no" onclick="setFlowVisit('choose','non',this)">Non</button>
+        </div>
+      </div>
       <label class="cho-checkbox">
         <input type="checkbox" id="cho-notify" checked>
         <span class="cho-check-box"></span>
@@ -698,6 +702,13 @@ body{
     <div class="rej-body">
       <div class="rej-title" id="rej-title">Refuser cette candidature ?</div>
       <div class="rej-desc" id="rej-desc">Le candidat recevra automatiquement un message poli lui indiquant que sa candidature n'a pas été retenue.</div>
+      <div class="q-visite">
+        <div class="q-visite-lbl">A-t-il visité le bien ?</div>
+        <div class="q-visite-opts">
+          <button type="button" class="q-opt" id="rej-visit-yes" onclick="setFlowVisit('reject','oui',this)">Oui</button>
+          <button type="button" class="q-opt" id="rej-visit-no" onclick="setFlowVisit('reject','non',this)">Non</button>
+        </div>
+      </div>
     </div>
     <div class="cta-area">
       <button class="btn btn-red" onclick="rejectConv()">Refuser cette candidature</button>
@@ -723,6 +734,21 @@ body{
     <div class="home-bar"><div class="home-pill"></div></div>
   </div>
 </div>
+
+<div class="overlay" id="ov-confirm" onclick="closeOv('ov-confirm')">
+  <div class="sheet-handle"></div>
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="cho-body" style="gap:12px;">
+      <div class="cho-title" id="confirm-title">Confirmer l'action ?</div>
+      <div class="cho-desc" id="confirm-desc">Êtes-vous sûr ?</div>
+    </div>
+    <div class="cta-area" style="display:flex;gap:12px;">
+      <button class="btn btn-grey" style="color:#061f18;" onclick="closeOv('ov-confirm')">Annuler</button>
+      <button class="btn" id="confirm-cta" style="background:#497e64;color:#fff;font-weight:700;" onclick="confirmPendingAction()">Confirmer</button>
+    </div>
+    <div class="home-bar"><div class="home-pill"></div></div>
+  </div>
+</div>
 </div><!-- /phone -->
 
 
@@ -744,22 +770,6 @@ body{
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 256 256" fill="currentColor"><path d="M218.83,103.77l-80-75.48a1.14,1.14,0,0,1-.11-.11,16,16,0,0,0-21.53,0l-.11.11L37.17,103.77A16,16,0,0,0,32,115.55V208a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V160h32v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V115.55A16,16,0,0,0,218.83,103.77Z"/></svg>
       <span>Mode hôte</span>
       <span style="margin-left:auto;font-size:11px;padding:2px 8px;border-radius:100px;background:#f2f2f2;color:#727373;font-family:'Satoshi',sans-serif;">Bientôt dispo</span>
-    </div>
-  </div>
-</div>
-
-<!-- ════ V10: BOTTOM SHEET – REFUS GROUPÉ ════ -->
-<div class="overlay" id="ov-refus-groupe" onclick="closeOv('ov-refus-groupe')">
-  <div class="sheet" onclick="event.stopPropagation()">
-    <div class="sheet-handle"></div>
-    <div class="sheet-header">
-      <span class="sheet-title">Refus groupé <span class="v10-badge">V10</span></span>
-    </div>
-    <p style="font-size:14px;color:#727373;font-family:'Satoshi',sans-serif;padding:0 24px 16px;line-height:1.5;">Sélectionnez les candidats à informer que leur candidature n'est pas retenue.</p>
-    <div id="rg-candidates" style="padding:0 24px;display:flex;flex-direction:column;gap:0;"></div>
-    <div style="padding:16px 24px 0;">
-      <button class="btn btn-red" id="btn-rg-confirm" onclick="confirmRefusGroupe()">Refuser les candidats sélectionnés</button>
-      <button class="btn btn-grey" style="color:#061f18;margin-top:8px;" onclick="closeOv('ov-refus-groupe')">Annuler</button>
     </div>
   </div>
 </div>
@@ -817,6 +827,9 @@ let convFav = false;
 const favState = {'sophie':false,'cecile':false,'jack':false};
 let chosenConv = null;
 let onboardingShown = false;
+let chooseVisitAnswer = 'oui';
+let rejectVisitAnswer = 'oui';
+let pendingAction = null;
 const filters = {
   tout: {favoris:false, nonlus:false},
   proprio: {favoris:false, dossier:false, refuse:false, incomplet:false, visite:false, nonlus:false}
@@ -977,6 +990,7 @@ function goToConv(name) {
   if (!conv) return;
   const titleEl = document.getElementById('conv-title');
   if (titleEl) titleEl.textContent = conv.title;
+  updateConversationHeaderAction();
 
   try {
     const ATTACH = `<div class="attach-card">
@@ -1006,6 +1020,22 @@ function goToConv(name) {
 
     if (conv.widgets) {
       const isFav = favState[name] || false;
+      const hasChosenAnother = Boolean(chosenConv && chosenConv !== name);
+      const decisionHtml = chosenConv === name ? `
+        <div class="action-wrap" onclick="openAttente()">
+          <button type="button" class="action-btn" style="background:#f2f2f2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 256 256" fill="#727373"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z"/></svg></button>
+          <span class="action-label" style="font-size:11px;white-space:nowrap;">En attente</span>
+        </div>` : `
+        <div class="action-wrap" onclick="openRejeter()">
+          <button type="button" class="action-btn" style="background:#f2f2f2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 256 256" fill="#061f18"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg></button>
+          <span class="action-label">Rejeter</span>
+        </div>
+        ${hasChosenAnother ? '' : `
+        <div class="action-wrap" onclick="openChoisir()">
+          <button type="button" class="action-btn" style="background:#f0fdf0"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 256 256" fill="#497e64"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></svg></button>
+          <span class="action-label">Choisir</span>
+        </div>`}
+      `;
       msgsHtml += `<div class="action-bar" id="action-bar">
         <div class="action-wrap" onclick="toggleFav()">
           <button type="button" class="action-btn" id="btn-fav" style="background:#f2f2f2">
@@ -1017,19 +1047,7 @@ function goToConv(name) {
           <button type="button" class="action-btn" style="background:#f2f2f2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 256 256" fill="currentColor"><path d="M216,72H130.67L102.94,51.2A16.12,16.12,0,0,0,93.34,48H40A16,16,0,0,0,24,64V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V88A16,16,0,0,0,216,72Zm0,120H40V64H93.34l27.73,20.8A16.12,16.12,0,0,0,130.67,88H216Z"/></svg></button>
           <span class="action-label">Dossier</span>
         </div>
-        ${chosenConv === name ? `
-        <div class="action-wrap" onclick="openAttente()">
-          <button type="button" class="action-btn" style="background:#f2f2f2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 256 256" fill="#727373"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z"/></svg></button>
-          <span class="action-label" style="font-size:11px;white-space:nowrap;">En attente</span>
-        </div>` : `
-        <div class="action-wrap" onclick="openOv('ov-rejeter')">
-          <button type="button" class="action-btn" style="background:#f2f2f2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 256 256" fill="#061f18"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg></button>
-          <span class="action-label">Rejeter</span>
-        </div>
-        <div class="action-wrap" onclick="openChoisir()">
-          <button type="button" class="action-btn" style="background:#f0fdf0"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 256 256" fill="#497e64"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></svg></button>
-          <span class="action-label">Choisir</span>
-        </div>`}
+        ${decisionHtml}
       </div>`;
     }
 
@@ -1055,15 +1073,7 @@ const SVG_HEART_F = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="
 
 function toggleFav() {
   favState[currentConv] = !favState[currentConv];
-  const isFav = favState[currentConv];
-  const btn = document.getElementById('btn-fav');
-  const icon = document.getElementById('fav-icon');
-  if (btn) btn.style.background = '#f2f2f2';
-  if (icon) icon.innerHTML = isFav ? SVG_HEART_F : SVG_HEART_O;
-  // Sync data-fav on all list items
-  document.querySelectorAll(`[data-name="${currentConv}"]`).forEach(el => {
-    el.setAttribute('data-fav', isFav ? 'true' : 'false');
-  });
+  syncFavUI(currentConv);
   // Re-apply filter if favoris active
   const mode = screen === 'proprio' ? 'proprio' : 'tout';
   if (filters[mode]?.favoris) applyFilters(mode);
@@ -1078,6 +1088,8 @@ function openRejeter() {
     const titleEl = document.getElementById('rej-title');
     if (titleEl) titleEl.textContent = 'Refuser ' + conv.name + ' ?';
   }
+  rejectVisitAnswer = 'oui';
+  syncVisitOptions('reject');
   openOv('ov-rejeter');
 }
 
@@ -1099,21 +1111,22 @@ function openDossier() {
 }
 
 function confirmChoice() {
-  chosenConv = currentConv;
-  const conv = CONV[currentConv];
-  if (conv) {
-    const nameEl = document.getElementById('chosen-name');
-    const bannerEl = document.getElementById('chosen-banner');
-    if (nameEl) nameEl.textContent = conv.name;
-    if (bannerEl) bannerEl.classList.add('show');
+  if (chooseVisitAnswer === 'non') {
+    closeOv('ov-choisir');
+    openConfirmation(
+      'choose',
+      'Choisir ce candidat ?',
+      'La PL intervient généralement après les visites. Êtes-vous sûr ?',
+      'Confirmer quand même'
+    );
+    return;
   }
-  closeOv('ov-choisir');
-  // Retour vers la liste proprio
-  showScreen('proprio');
+  finishChoice();
 }
 
 function openChoisir() {
   const conv = CONV[currentConv];
+  if (chosenConv && chosenConv !== currentConv) return;
   if (conv) {
     const name = conv.name;
     const firstName = name.split(' ')[0];
@@ -1125,35 +1138,130 @@ function openChoisir() {
   // Reset checkbox
   const cb = document.getElementById('cho-notify');
   if (cb) cb.checked = true;
+  chooseVisitAnswer = 'oui';
+  syncVisitOptions('choose');
   openOv('ov-choisir');
 }
 
 function rejectConv() {
-  // Marquer la conv courante comme refusée dans les listes
-  document.querySelectorAll(`[data-name="${currentConv}"]`).forEach(el => {
-    el.setAttribute('data-refuse', 'true');
-  });
-  closeOv('ov-rejeter');
-  // Re-appliquer les filtres si "Refusé" est actif en mode proprio
-  if (filters.proprio.refuse) applyFilters('proprio');
+  if (rejectVisitAnswer === 'non') {
+    closeOv('ov-rejeter');
+    openConfirmation(
+      'reject',
+      'Refuser ce candidat ?',
+      'Vous allez refuser cette candidature sans avoir effectué de visite. Êtes-vous sûr ?',
+      'Oui, refuser'
+    );
+    return;
+  }
+  finishReject();
 }
 
 function markFav(name) {
   favState[name] = true;
-  document.querySelectorAll(`[data-name="${name}"]`).forEach(el => {
-    el.setAttribute('data-fav','true');
-  });
+  syncFavUI(name);
   // Collapse swipe
   document.querySelectorAll('.swipe-reveal').forEach(r => r.classList.remove('show'));
   document.querySelectorAll('.conv-item.shifted').forEach(i => i.classList.remove('shifted'));
+  if (filters.tout?.favoris) applyFilters('tout');
+  if (filters.proprio?.favoris) applyFilters('proprio');
+}
+
+function syncFavUI(name) {
+  const isFav = favState[name] || false;
+  document.querySelectorAll(`[data-name="${name}"]`).forEach(el => {
+    el.setAttribute('data-fav', isFav ? 'true' : 'false');
+  });
   if (currentConv === name) {
     const btn = document.getElementById('btn-fav');
     const icon = document.getElementById('fav-icon');
     if (btn) btn.style.background = '#f2f2f2';
-    if (icon) icon.innerHTML = SVG_HEART_F;
+    if (icon) icon.innerHTML = isFav ? SVG_HEART_F : SVG_HEART_O;
+    updateConversationHeaderAction();
   }
-  if (filters.tout?.favoris) applyFilters('tout');
-  if (filters.proprio?.favoris) applyFilters('proprio');
+}
+
+function updateConversationHeaderAction() {
+  const btn = document.getElementById('conv-hdr-action');
+  const icon = document.getElementById('conv-hdr-action-icon');
+  if (!btn || !icon) return;
+  if (currentConv === 'jack') {
+    btn.classList.remove('hidden');
+    btn.setAttribute('aria-label', favState.jack ? 'Retirer des favoris' : 'Ajouter aux favoris');
+    icon.innerHTML = favState.jack ? SVG_HEART_F : SVG_HEART_O;
+  } else {
+    btn.classList.add('hidden');
+    icon.innerHTML = '';
+  }
+}
+
+function setFlowVisit(flow, value, btn) {
+  if (flow === 'choose') {
+    chooseVisitAnswer = value;
+    document.querySelectorAll('#ov-choisir .q-opt').forEach(el => el.classList.remove('on'));
+  } else {
+    rejectVisitAnswer = value;
+    document.querySelectorAll('#ov-rejeter .q-opt').forEach(el => el.classList.remove('on'));
+  }
+  btn.classList.add('on');
+}
+
+function syncVisitOptions(flow) {
+  const value = flow === 'choose' ? chooseVisitAnswer : rejectVisitAnswer;
+  const yesId = flow === 'choose' ? 'cho-visit-yes' : 'rej-visit-yes';
+  const noId = flow === 'choose' ? 'cho-visit-no' : 'rej-visit-no';
+  document.getElementById(yesId)?.classList.toggle('on', value === 'oui');
+  document.getElementById(noId)?.classList.toggle('on', value === 'non');
+}
+
+function markVisitedState(name, value) {
+  const visited = value === 'oui';
+  document.querySelectorAll(`[data-name="${name}"]`).forEach(el => {
+    el.setAttribute('data-visited', visited ? 'true' : 'false');
+  });
+}
+
+function finishChoice() {
+  chosenConv = currentConv;
+  const conv = CONV[currentConv];
+  markVisitedState(currentConv, chooseVisitAnswer);
+  if (conv) {
+    const nameEl = document.getElementById('chosen-name');
+    const bannerEl = document.getElementById('chosen-banner');
+    if (nameEl) nameEl.textContent = conv.name;
+    if (bannerEl) bannerEl.classList.add('show');
+  }
+  closeOv('ov-choisir');
+  closeOv('ov-confirm');
+  applyFilters('proprio');
+  showScreen('proprio');
+}
+
+function finishReject() {
+  document.querySelectorAll(`[data-name="${currentConv}"]`).forEach(el => {
+    el.setAttribute('data-refuse', 'true');
+  });
+  markVisitedState(currentConv, rejectVisitAnswer);
+  closeOv('ov-rejeter');
+  closeOv('ov-confirm');
+  if (filters.proprio.refuse || filters.proprio.visite) applyFilters('proprio');
+}
+
+function openConfirmation(action, title, desc, cta) {
+  pendingAction = action;
+  const titleEl = document.getElementById('confirm-title');
+  const descEl = document.getElementById('confirm-desc');
+  const ctaEl = document.getElementById('confirm-cta');
+  if (titleEl) titleEl.textContent = title;
+  if (descEl) descEl.textContent = desc;
+  if (ctaEl) ctaEl.textContent = cta;
+  openOv('ov-confirm');
+}
+
+function confirmPendingAction() {
+  if (pendingAction === 'choose') finishChoice();
+  if (pendingAction === 'reject') finishReject();
+  pendingAction = null;
 }
 
 /* ── Filters ── */
@@ -1206,7 +1314,7 @@ function applyFilters(mode) {
       if (filters.proprio.dossier && !isDossier) show = false;
       if (filters.proprio.refuse && !isRefuse) show = false;
       if (filters.proprio.incomplet && isDossier) show = false;
-      if (filters.proprio.visite && el.getAttribute('data-name') !== 'sophie') show = false;
+      if (filters.proprio.visite && el.getAttribute('data-visited') !== 'true') show = false;
       if (filters.proprio.nonlus && !isUnread) show = false;
     }
     wrap.style.display = show ? '' : 'none';
@@ -1356,49 +1464,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (el) setupLongPress(el, el.dataset.name);
   });
 });
-
-// ═══ V10: QUESTION VISITE ═══
-let visiteAnswer = 'oui';
-function setVisite(v, btn) {
-  visiteAnswer = v;
-  document.querySelectorAll('.q-opt').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on');
-}
-
-// ═══ V10: REFUS GROUPÉ ═══
-function openRefusGroupe() {
-  const container = document.getElementById('rg-candidates');
-  const candidates = Object.entries(CONV)
-    .filter(([k, c]) => c.proprio)
-    .map(([k, c]) => `
-      <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #f2f2f2;cursor:pointer;" onclick="toggleRGItem(this)">
-        <div style="width:22px;height:22px;border-radius:50%;border:2px solid #6aa086;background:#6aa086;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0;" class="rg-check" data-selected="true">✓</div>
-        <div style="flex:1;font-size:15px;font-weight:500;font-family:'Satoshi',sans-serif;color:#061f18;">${c.name}</div>
-      </div>
-    `).join('');
-  container.innerHTML = candidates;
-  updateRGBtn();
-  openOv('ov-refus-groupe');
-}
-function toggleRGItem(row) {
-  const ch = row.querySelector('.rg-check');
-  const isOn = ch.dataset.selected === 'true';
-  ch.style.background = isOn ? '#fff' : '#6aa086';
-  ch.style.borderColor = isOn ? '#e2e4e8' : '#6aa086';
-  ch.style.color = isOn ? 'transparent' : '#fff';
-  ch.dataset.selected = isOn ? 'false' : 'true';
-  updateRGBtn();
-}
-function updateRGBtn() {
-  const all = document.querySelectorAll('#rg-candidates .rg-check');
-  const selected = Array.from(all).filter(c => c.dataset.selected === 'true').length;
-  document.getElementById('btn-rg-confirm').textContent = 
-    `Refuser ${selected} candidat${selected > 1 ? 's' : ''}`;
-}
-function confirmRefusGroupe() {
-  closeOv('ov-refus-groupe');
-  // Show brief feedback
-}
 
 </script>
 </body>
